@@ -5,6 +5,7 @@ import threading
 import time
 
 # Parameters to be defined by the user
+
 waiting_time_before_resending_request = 200 # Time the client will wait before resending the request. This time, it broadcasts the request to all nodes
 timer_limit_before_view_change = 200 # There is no value proposed in the paper so let's fix it to 120s
 checkpoint_frequency = 100 # 100 is the proposed value in the original article
@@ -13,24 +14,16 @@ checkpoint_frequency = 100 # 100 is the proposed value in the original article
 p = 1
 
 # Define the nodes we want in our network + their starting time + their type
-print(">> Environment nodes setup")
 nodes={} # This is a dictionary of nodes we want in our network. Keys are the nodes types, and values are a list of tuples of starting time and number of nodes 
 #nodes[starting time] = [(type of nodes , number of nodes)]
-faulty_primary = 0 
-slow_nodes = 0
-honest_node = 4
-non_responding_node = 0
-faulty_node = 0
-faulty_replies_node = 0
-nodes[0]=[("faulty_primary",faulty_primary),("slow_nodes",slow_nodes),("honest_node",honest_node),("non_responding_node",non_responding_node),("faulty_node",faulty_node),("faulty_replies_node",faulty_replies_node)] # Nodes starting from the beginning
-print("\tfaulty_primary %d \n\tslow_nodes %d \n\thonest_node %d \n\tnon_responding_node %d \n\tfaulty_node %d \n\tfaulty_replies_node %d"%(faulty_primary, slow_nodes, honest_node, non_responding_node, faulty_node, faulty_replies_node))
+nodes[0]=[("faulty_primary",0),("slow_nodes",0),("honest_node",5),("non_responding_node",0),("faulty_node",0),("faulty_replies_node",0)] # Nodes starting from the beginning
 #nodes[1]=[("faulty_primary",0),("honest_node",1),("non_responding_node",0),("slow_nodes",1),("faulty_node",1),("faulty_replies_node",0)] # Nodes starting after 2 seconds
 #nodes[2]=[("faulty_primary",0),("honest_node",0),("non_responding_node",0),("slow_nodes",2),("faulty_node",1),("faulty_replies_node",0)]
 
 # Running APBFT protocol
 run_APBFT(nodes=nodes,proportion=p,checkpoint_frequency0=checkpoint_frequency,clients_ports0=clients_ports,timer_limit_before_view_change0=timer_limit_before_view_change)
 
-time.sleep(3)  # Waiting for the network to start...
+time.sleep(1)  # Waiting for the network to start...
 
 # Run clients:
 requests_number = 1  # The user chooses the number of requests he wants to execute simultaneously (They are all sent to the PBFT network at the same time) - Here each request will be sent by a different client
