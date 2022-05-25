@@ -1,4 +1,5 @@
 import threading
+import math
 from threading import Lock
 import socket
 import json
@@ -170,8 +171,19 @@ def run_nodes(nodes):
     sorted_nodes_list = sort_biggest_ping_number_nodes(nodes_list)
     sorted_nodes_list_with_ping_counts = getNodesWithPingCount(sorted_nodes_list)
     print("\t  %s"%(sorted_nodes_list_with_ping_counts))
-
+    
+    # display endorser nodes
+    endorser_sorted_list = create_endorser(sorted_nodes_list)
+    print("\t> Endorser")
+    endorser_sorted_list_with_ping_counts = getNodesWithPingCount(endorser_sorted_list)
+    print("\t  %s"%(endorser_sorted_list_with_ping_counts))
+    
     print("Nodes online")
+
+
+def create_endorser(sorted_nodes_list):
+    n = math.ceil(len(sorted_nodes_list) / 10)
+    return sorted_nodes_list[:n]
 
 
 def getNodesWithPingCount(nodes_list):
@@ -182,7 +194,7 @@ def getNodesWithPingCount(nodes_list):
     return nodes_ping_history
 
 def sort_biggest_ping_number_nodes(to_sort_list):
-    to_sort_list.sort(key=lambda row: row.ping_count)
+    to_sort_list.sort(key=lambda row: row.ping_count, reverse=True)
     return to_sort_list
 
 # print(consensus_nodes)
