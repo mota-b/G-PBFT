@@ -19,7 +19,7 @@ nodes={} # This is a dictionary of nodes we want in our network. Keys are the no
 #nodes[starting time] = [(type of nodes , number of nodes)]
 faulty_primary = 0 
 slow_nodes = 0
-honest_node = 40
+honest_node = 50
 non_responding_node = 0
 faulty_node = 0
 faulty_replies_node = 0
@@ -45,5 +45,9 @@ for i in range(requests_number):
     globals()["C%s" % str(i)] = Client(i, waiting_time_before_resending_request)
     clients_list.append(globals()["C%s" % str(i)])
 for i in range (requests_number):
-    threading.Thread(target=clients_list[i].send_to_primary,args=("I am the client "+str(i),get_primary_id(),get_nodes_ids_list(),get_f())).start()
+    nodes_ids_list = get_nodes_ids_list()
+    # primary_id = get_primary_id()
+    primary_id = nodes_ids_list[0]
+
+    threading.Thread(target=clients_list[i].send_to_primary,args=("I am the client "+str(i),primary_id,nodes_ids_list,get_f())).start()
     time.sleep(1) #Exécution plus rapide lorsqu'on attend un moment avant de lancer la requête suivante

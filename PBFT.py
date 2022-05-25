@@ -95,6 +95,10 @@ def run_APBFT(nodes, proportion, checkpoint_frequency0, clients_ports0,
     global nodes_list
     nodes_list = []
 
+    # list of nodes participating in the consesus
+    global consensus_nodes_list
+    consensus_nodes_list = []
+
     global total_processed_messages
     total_processed_messages = 0  # The total number of preocessed messages - this is the total number of send messages through the netwirk while processing a request
 
@@ -182,7 +186,7 @@ def run_nodes(nodes):
     # append endorses to consensus nodes list
     for endorser in endorser_sorted_list:
         nodes_id.append(endorser.node_id)
-
+    consensus_nodes_list = endorser
     print("\t> Consesus participants IDs")
     print("\t  %s"%(nodes_id))
     
@@ -237,6 +241,7 @@ def reply_received(request,
 
 def get_primary_id():
     node_0 = nodes_list[0]
+    # node_0 = nodes_list[0]
     return node_0.primary_node_id
 
 
