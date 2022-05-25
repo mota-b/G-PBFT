@@ -134,7 +134,11 @@ def run_nodes(nodes):
     # Starting nodes:
     last_waiting_time = 0
     for waiting_time in nodes:
+        print("waiting_time")
+        print(waiting_time)
         for tuple in nodes[waiting_time]:
+            print("nodes[waiting_time]")
+            print(nodes[waiting_time])
             for i in range(tuple[1]):
                 time.sleep(waiting_time - last_waiting_time)
                 last_waiting_time = waiting_time
@@ -164,7 +168,7 @@ def run_nodes(nodes):
                 # print("%s node %d started" %(node_type,j))
                 j = j + 1
 
-    
+    # nodes_id.append(nodes_list[0].node_id)
     # display nodes
     nodes_list_with_ping_counts = getNodesWithPingCount(nodes_list)
     print("\t> Node list")
@@ -431,6 +435,7 @@ class Node():
                             i = 1
 
                     if i == 1:
+                        print(waiting_time)
                         time.sleep(waiting_time)
                         # print(self.node_id,"sleep",waiting_time)
                         reply = self.send_reply_message_to_client(received_message)
@@ -661,9 +666,13 @@ class Node():
             s = self.socket
             c, _ = s.accept()
             received_message = c.recv(2048)
+            print("received_message")
+            print(_)
+            print(waiting_time)
             # print("Node %d got message: %s" % (self.node_id , received_message))
             [received_message, public_key] = received_message.split(b'split')
-
+            print("[received_message, public_key]")
+            print([received_message, public_key])
             # Create a VerifyKey object from a hex serialized public key    
             verify_key = VerifyKey(public_key)
             received_message = verify_key.verify(received_message).decode()

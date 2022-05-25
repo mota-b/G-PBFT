@@ -100,9 +100,7 @@ class Client:  # Client's communication is synchronous: It can not send a reques
     def send_to_primary(self, request, primary_node_id, nodes_ids_list,
                         f):  # Sends a request to the primary and waits for f+1 similar answers
 
-        print("primary_node_id")
-        print(primary_node_id)
-        
+       
         primary_node_port = nodes_ports[primary_node_id]
         with open(request_format_file):
             request_format = open(request_format_file)
