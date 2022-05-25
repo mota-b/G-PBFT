@@ -17,9 +17,9 @@ def random_addr(j):
     return addr
 
 
-class csc:
-    def __init__(self, geohash):
-        self.geohash = geohash
+class CSC():
+    def __init__(self):
+        self.geohash = random_addr(20)
         self.addr = random_addr(12)
         self.csc = hashlib.sha3_256(self.geohash + self.addr)
 
@@ -230,6 +230,7 @@ class Node():
         self.replies_time = {}  # This is a dictionary of the accepted preprepare messages with the time they were replied to. The dictionary has the form : {"request": ["reply",replying_time]...}. the request is discarded once it is executed.
         self.received_view_changes = {}  # Dictionary of received view-change messages (+ the view change the node itself sent) if the node is the primary node in the new view, it has the form: {new_view_number:[list_of_view_change_messages]}
         self.asked_view_change = []  # view numbers the node asked for
+        self.csc = CSC()
 
     def process_received_message(self, received_message, waiting_time):
         global total_processed_messages
