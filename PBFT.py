@@ -110,6 +110,9 @@ def run_APBFT(nodes, proportion, checkpoint_frequency0, clients_ports0,
     global consensus_nodes  # ids of nodes participating in the consensus
     consensus_nodes = []
 
+    global CSC_list
+    geo_hash = []
+
     threading.Thread(target=run_nodes, args=(nodes,)).start()
 
 
@@ -1004,3 +1007,14 @@ class FaultyRepliesNode(Node):  # This node sends a fauly reply to the client
         except:
             pass
         return reply
+
+def add_geo_hash (id_node,CSC_list):
+    CSC_list.append(id_node,CSC)
+
+
+def check_geo_hash (node, CSC_list):
+    item = (node.id_node, node.CSC)
+    if item in CSC_list:
+        return True
+    else:
+        return False
