@@ -231,6 +231,7 @@ class Node():
         self.received_view_changes = {}  # Dictionary of received view-change messages (+ the view change the node itself sent) if the node is the primary node in the new view, it has the form: {new_view_number:[list_of_view_change_messages]}
         self.asked_view_change = []  # view numbers the node asked for
         self.csc = CSC()
+        self.ping_count = random.randrange(1,100)
 
     def process_received_message(self, received_message, waiting_time):
         global total_processed_messages
