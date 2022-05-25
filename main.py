@@ -23,10 +23,14 @@ nodes[0]=[("faulty_primary",0),("slow_nodes",0),("honest_node",5),("non_respondi
 # Running APBFT protocol
 run_APBFT(nodes=nodes,proportion=p,checkpoint_frequency0=checkpoint_frequency,clients_ports0=clients_ports,timer_limit_before_view_change0=timer_limit_before_view_change)
 
+print("\n>> 2) Network starting...")
 time.sleep(1)  # Waiting for the network to start...
+print("Network online ")
 
 # Run clients:
+print("\n>> 3) Clients request")
 requests_number = 1  # The user chooses the number of requests he wants to execute simultaneously (They are all sent to the PBFT network at the same time) - Here each request will be sent by a different client
+print("  [clients_number: '%d', 'client_request_interval: '%d']"%(requests_number, waiting_time_before_resending_request))
 clients_list = []
 for i in range(requests_number):
     globals()["C%s" % str(i)] = Client(i, waiting_time_before_resending_request)
