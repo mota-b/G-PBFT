@@ -86,6 +86,7 @@ class Client:  # Client's communication is synchronous: It can not send a reques
                     replies[str_response] = 1
                 else:
                     replies[str_response] = replies[str_response] + 1
+                
                 if (replies[str_response]>similar_replies):
                     similar_replies = similar_replies +1
                     if similar_replies == (f+1):
@@ -93,7 +94,7 @@ class Client:  # Client's communication is synchronous: It can not send a reques
                         receiving_time=time.time()
                         duration = receiving_time-sending_time
                         number_of_messages = reply_received(received_message["request"],received_message["result"])
-                        print("Client %d got reply within %f seconds. The network exchanged %d messages" % (self.client_id,duration,number_of_messages))
+                        print("Client-%d got reply within %f seconds. The network exchanged %d messages" % (self.client_id,duration,number_of_messages))
                         self.sent_requests_without_answer.remove(received_message["request"])
 
     def send_to_primary(self, request, primary_node_id, nodes_ids_list,
@@ -126,6 +127,8 @@ class Client:  # Client's communication is synchronous: It can not send a reques
         sending_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         host = socket.gethostname()
         sending_socket.connect((host, primary_node_port))
+        print("\t> Client-%s "%(self.client_id))
+        print("\t\tClient-%s sending request to Primary"%(self.client_id))
         sending_socket.send(request_message)
         if (request not in self.sent_requests_without_answer):
             self.sent_requests_without_answer.append(request)
@@ -186,7 +189,10 @@ class Client:  # Client's communication is synchronous: It can not send a reques
                         receiving_time=time.time()
                         duration = receiving_time-sending_time
                         number_of_messages = reply_received(received_message["request"],received_message["result"])
-                        print("Client %d got reply within %f seconds. The network exchanged %d messages" % (self.client_id,duration,number_of_messages))
+                        
+                        current_replie_number = list( replies.values())[0]
+                        if current_replie_number == len(nodes_ids_list): # print the final number of message
+                            print("\t\tClient-%d got reply within %f seconds. The network exchanged %d messages" % (self.client_id,duration,number_of_messages))
                         if (received_message["request"] in self.sent_requests_without_answer):
                             self.sent_requests_without_answer.remove(received_message["request"])
                         # Punish nodes that sent a bad reply to the client:
