@@ -1013,12 +1013,12 @@ class FaultyRepliesNode(Node):  # This node sends a fauly reply to the client
             pass
         return reply
 
-def add_geo_hash (id_node,CSC_list):
-    CSC_list.append(id_node,CSC)
+def add_geo_hash (node,CSC_list):
+    CSC_list.append(node.id_node,node.csc.csc)
 
 
 def check_geo_hash (node, CSC_list):
-    item = (node.id_node, node.CSC)
+    item = (node.id_node, node.csc.csc)
     if item in CSC_list:
         return True
     else:
