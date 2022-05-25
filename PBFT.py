@@ -154,7 +154,7 @@ def run_nodes(nodes):
                 processed_messages.append(0)
                 messages_processing_rate.append(0)  # Initiated with 0
 
-                nodes_id.append(j)
+                # nodes_id.append(j) # now we have endorsers list to add for the consensus
                 n = n + 1
                 f = (n - 1) // 3
                 # print("%s node %d started" %(node_type,j))
@@ -167,18 +167,26 @@ def run_nodes(nodes):
     print("\t  %s"%(nodes_list_with_ping_counts))
 
     # display sorted nodes
-    print("\t> Sorted node list")
+    # print("\t> Sorted node list")
     sorted_nodes_list = sort_biggest_ping_number_nodes(nodes_list)
-    sorted_nodes_list_with_ping_counts = getNodesWithPingCount(sorted_nodes_list)
-    print("\t  %s"%(sorted_nodes_list_with_ping_counts))
+    # sorted_nodes_list_with_ping_counts = getNodesWithPingCount(sorted_nodes_list)
+    # print("\t  %s"%(sorted_nodes_list_with_ping_counts))
     
     # display endorser nodes
     endorser_sorted_list = create_endorser(sorted_nodes_list)
-    print("\t> Endorser")
+    print("\t> Endorsers")
     endorser_sorted_list_with_ping_counts = getNodesWithPingCount(endorser_sorted_list)
     print("\t  %s"%(endorser_sorted_list_with_ping_counts))
     
-    print("Nodes online")
+    
+    # append endorses to consensus nodes list
+    for endorser in endorser_sorted_list:
+        nodes_id.append(endorser.node_id)
+
+    print("\t> Consesus participants IDs")
+    print("\t  %s"%(nodes_id))
+    
+    print("\nNodes online")
 
 
 def create_endorser(sorted_nodes_list):
