@@ -161,14 +161,29 @@ def run_nodes(nodes):
 
     
     # display nodes
-    displayNodes(nodes_list)
+    nodes_list_with_ping_counts = getNodesWithPingCount(nodes_list)
+    print("\t> Node list")
+    print("\t  %s"%(nodes_list_with_ping_counts))
+
+    # display sorted nodes
+    print("\t> Sorted node list")
+    sorted_nodes_list = sort_biggest_ping_number_nodes(nodes_list)
+    sorted_nodes_list_with_ping_counts = getNodesWithPingCount(sorted_nodes_list)
+    print("\t  %s"%(sorted_nodes_list_with_ping_counts))
+
     print("Nodes online")
 
-# Display created nodes list     
-def displayNodes(nodes_list):
-    for node in nodes_list:
-        print (node.toString())
 
+def getNodesWithPingCount(nodes_list):
+    nodes_ping_history = []
+    for node in nodes_list:
+        node_name = "node-"+ str(node.node_id)
+        nodes_ping_history.append([node_name, node.ping_count])
+    return nodes_ping_history
+
+def sort_biggest_ping_number_nodes(to_sort_list):
+    to_sort_list.sort(key=lambda row: row.ping_count)
+    return to_sort_list
 
 # print(consensus_nodes)
 
@@ -878,6 +893,7 @@ class Node():
     
     def toString(self):
        return self.node_id, self.ping_count
+    
 
 
 class HonestNode(Node):
