@@ -14,9 +14,18 @@ checkpoint_frequency = 100 # 100 is the proposed value in the original article
 p = 1
 
 # Define the nodes we want in our network + their starting time + their type
+print(">> 1) Environment nodes setup ")
 nodes={} # This is a dictionary of nodes we want in our network. Keys are the nodes types, and values are a list of tuples of starting time and number of nodes 
 #nodes[starting time] = [(type of nodes , number of nodes)]
-nodes[0]=[("faulty_primary",0),("slow_nodes",0),("honest_node",5),("non_responding_node",0),("faulty_node",0),("faulty_replies_node",0)] # Nodes starting from the beginning
+faulty_primary = 0 
+slow_nodes = 0
+honest_node = 5
+non_responding_node = 0
+faulty_node = 0
+faulty_replies_node = 0
+
+nodes[0]=[("faulty_primary",faulty_primary),("slow_nodes",slow_nodes),("honest_node",honest_node),("non_responding_node",non_responding_node),("faulty_node",faulty_node),("faulty_replies_node",faulty_replies_node)] # Nodes starting from the beginning
+print("  faulty_primary %d,  slow_nodes %d, honest_node %d \n  non_responding_node %d, faulty_node %d, faulty_replies_node %d"%(faulty_primary, slow_nodes, honest_node, non_responding_node, faulty_node, faulty_replies_node))
 #nodes[1]=[("faulty_primary",0),("honest_node",1),("non_responding_node",0),("slow_nodes",1),("faulty_node",1),("faulty_replies_node",0)] # Nodes starting after 2 seconds
 #nodes[2]=[("faulty_primary",0),("honest_node",0),("non_responding_node",0),("slow_nodes",2),("faulty_node",1),("faulty_replies_node",0)]
 
