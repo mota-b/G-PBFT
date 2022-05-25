@@ -17,11 +17,11 @@ def random_addr(j):
     return addr
 
 
-class CSC():
+class CSC:
     def __init__(self):
         self.geohash = random_addr(20)
         self.addr = random_addr(12)
-        self.csc = hashlib.sha3_256(self.geohash + self.addr)
+        self.csc = hashlib.sha3_256(self.geohash.encode('utf-8') + self.addr.encode('utf-8'))
 
 
 ports_file = "ports.json"
