@@ -114,6 +114,7 @@ def run_APBFT(nodes, proportion, checkpoint_frequency0, clients_ports0,
 
 
 def run_nodes(nodes):
+    print("\n>> 3) Starting nodes...")
     global j
     global n
     global f
@@ -130,6 +131,7 @@ def run_nodes(nodes):
                 time.sleep(waiting_time - last_waiting_time)
                 last_waiting_time = waiting_time
                 node_type = tuple[0]
+                
                 if (node_type == "honest_node"):
                     node = HonestNode(node_id=j)
                 elif (node_type == "non_responding_node"):
@@ -153,6 +155,16 @@ def run_nodes(nodes):
                 f = (n - 1) // 3
                 # print("%s node %d started" %(node_type,j))
                 j = j + 1
+
+    
+    # display nodes
+    displayNodes(nodes_list)
+    print("Nodes online")
+
+# Display created nodes list     
+def displayNodes(nodes_list):
+    for node in nodes_list:
+        print (node.toString())
 
 
 # print(consensus_nodes)
@@ -855,6 +867,9 @@ class Node():
         except:
             pass
         return reply
+    
+    def toString(self):
+       return self.node_id, self.ping_count
 
 
 class HonestNode(Node):

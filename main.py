@@ -19,7 +19,7 @@ nodes={} # This is a dictionary of nodes we want in our network. Keys are the no
 #nodes[starting time] = [(type of nodes , number of nodes)]
 faulty_primary = 0 
 slow_nodes = 0
-honest_node = 10
+honest_node = 5
 non_responding_node = 0
 faulty_node = 0
 faulty_replies_node = 0
@@ -32,7 +32,7 @@ print("  faulty_primary %d,  slow_nodes %d, honest_node %d \n  non_responding_no
 # Running APBFT protocol
 run_APBFT(nodes=nodes,proportion=p,checkpoint_frequency0=checkpoint_frequency,clients_ports0=clients_ports,timer_limit_before_view_change0=timer_limit_before_view_change)
 
-print("\n>> 2) Network starting...")
+print("\n>> 2) Starting network...")
 time.sleep(1)  # Waiting for the network to start...
 print("Network online ")
 
