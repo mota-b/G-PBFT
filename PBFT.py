@@ -107,8 +107,11 @@ def run_APBFT(nodes, proportion, checkpoint_frequency0, clients_ports0,
 
     ###################
 
-    global consensus_nodes  # ids of nodes participating in the consensus
-    consensus_nodes = []
+    global nodes_id  # ids of nodes participating in the consensus
+    nodes_id = []
+
+    global CSC_list
+    geo_hash = []
 
     threading.Thread(target=run_nodes, args=(nodes,)).start()
 
@@ -148,7 +151,7 @@ def run_nodes(nodes):
                 processed_messages.append(0)
                 messages_processing_rate.append(0)  # Initiated with 0
 
-                consensus_nodes.append(j)
+                nodes_id.append(j)
                 n = n + 1
                 f = (n - 1) // 3
                 # print("%s node %d started" %(node_type,j))
@@ -190,8 +193,12 @@ def get_primary_id():
     return node_0.primary_node_id
 
 
+def get_nodes_list():
+    return nodes_list
+
+
 def get_nodes_ids_list():
-    return consensus_nodes
+    return nodes_id
 
 
 def get_f():
@@ -231,7 +238,7 @@ class Node():
         self.received_view_changes = {}  # Dictionary of received view-change messages (+ the view change the node itself sent) if the node is the primary node in the new view, it has the form: {new_view_number:[list_of_view_change_messages]}
         self.asked_view_change = []  # view numbers the node asked for
         self.csc = CSC()
-        self.ping_count = random.randrange(1,100)
+        self.ping_count = random.randrange(1, 100)
 
     def process_received_message(self, received_message, waiting_time):
         global total_processed_messages
@@ -260,7 +267,7 @@ class Node():
                         requests[client_id] = actual_timestamp
                         self.message_log.append(received_message)
                         self.broadcast_preprepare_message(request_message=received_message,
-                                                          nodes_ids_list=consensus_nodes)
+                                                          nodes_ids_list=nodes_id)
                 else:
                     self.send(destination_node_id=self.primary_node_id, message=received_message)
         elif (message_type == "PREPREPARE"):
@@ -289,7 +296,7 @@ class Node():
                 if tuple not in self.preprepares:
                     self.message_log.append(received_message)
                     self.preprepares[tuple] = digest
-                    self.broadcast_prepare_message(preprepare_message=received_message, nodes_ids_list=consensus_nodes)
+                    self.broadcast_prepare_message(preprepare_message=received_message, nodes_ids_list=nodes_id)
 
         elif (message_type == "PREPARE"):
             total_processed_messages += 1
@@ -306,7 +313,8 @@ class Node():
             the_sequence_number = received_message["sequence_number"]
             the_request_digest = received_message["request_digest"]
             tuple = (
-            received_message["view_number"], received_message["sequence_number"], received_message["request_digest"])
+                received_message["view_number"], received_message["sequence_number"],
+                received_message["request_digest"])
             node_id = received_message["node_id"]
             if ((received_message["view_number"] == self.view_number)):
                 self.message_log.append(received_message)
@@ -329,7 +337,7 @@ class Node():
             if (p == 1 and len(self.prepares[tuple]) == (
                     2 * f)):  # The 2*f received messages also include the node's own received message
                 self.prepared_messages.append(received_message)
-                self.broadcast_commit_message(prepare_message=received_message, nodes_ids_list=consensus_nodes,
+                self.broadcast_commit_message(prepare_message=received_message, nodes_ids_list=nodes_id,
                                               sequence_number=the_sequence_number)
 
         elif (message_type == "COMMIT"):
@@ -414,7 +422,7 @@ class Node():
 
                             checkpoint_message = signed_checkpoint + (b'split') + public_key
 
-                            self.broadcast_message(consensus_nodes, checkpoint_message)
+                            self.broadcast_message(nodes_id, checkpoint_message)
 
         elif (message_type == "CHECKPOINT"):
             lock = Lock()
@@ -480,7 +488,7 @@ class Node():
             new_asked_view = received_message["new_view"]
             node_requester = received_message["node_id"]
             if (new_asked_view % len(
-                    consensus_nodes) == self.node_id):  # If the actual node is the primary node for the next view
+                    nodes_id) == self.node_id):  # If the actual node is the primary node for the next view
                 if new_asked_view not in self.received_view_changes:
                     self.received_view_changes[new_asked_view] = [received_message]
                 else:
@@ -572,7 +580,7 @@ class Node():
                         # Change primary node (locally first then broadcast view change)
                         self.primary_node_id = self.node_id
 
-                        self.broadcast_message(consensus_nodes, new_view_message)
+                        self.broadcast_message(nodes_id, new_view_message)
                         print("New view!")
 
 
@@ -589,7 +597,7 @@ class Node():
                 for message in O:
                     if (received_message["request_digest"] != "null"):
                         self.message_log.append(message)
-                        prepare_message = self.broadcast_prepare_message(message, consensus_nodes)
+                        prepare_message = self.broadcast_prepare_message(message, nodes_id)
                         self.message_log.append(prepare_message)
             self.view_number = received_message["new_view_number"]
             self.primary_node_id = received_message["new_view_number"] % n
@@ -1004,3 +1012,14 @@ class FaultyRepliesNode(Node):  # This node sends a fauly reply to the client
         except:
             pass
         return reply
+
+def add_geo_hash (node,CSC_list):
+    CSC_list.append(node.id_node,node.csc.csc)
+
+
+def check_geo_hash (node, CSC_list):
+    item = (node.id_node, node.csc.csc)
+    if item in CSC_list:
+        return True
+    else:
+        return False
