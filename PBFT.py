@@ -176,7 +176,7 @@ def reply_received(request,
     last_reply_time = time.time()
 
     if processed_requests % 5 == 0:  # We want to stop counting at 100 for example
-        print("Network validated %d requests within %f seconds" % (
+        print("\t\t  Network validated %d requests within %f seconds" % (
         processed_requests, last_reply_time - first_reply_time))
 
     replied_requests[request] = 1
