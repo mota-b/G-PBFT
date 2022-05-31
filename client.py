@@ -27,11 +27,11 @@ request_format_file = "messages_formats/request_format.json"
 
 class Client:  # Client's communication is synchronous: It can not send a request until its last request is answered.
 
-    def __init__(self, client_id, waiting_time_before_resending_request):
+    def __init__(self, client_id, REQUEST_INTERVAL):
         self.client_id = client_id
         self.client_port = clients_ports[client_id]
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(waiting_time_before_resending_request)
+        s.settimeout(REQUEST_INTERVAL)
         host = socket.gethostname()
         s.bind((host, self.client_port))
         s.listen()
@@ -72,7 +72,7 @@ class Client:  # Client's communication is synchronous: It can not send a reques
             received_message  = verify_key.verify(received_message).decode()
             received_message = received_message.replace("\'", "\"")
             received_message = json.loads(received_message)
-            #print("Client %d received message: %s" % (self.client_id , received_message))
+            print("Client %d received message: %s" % (self.client_id , received_message))
             answering_node_id = received_message["node_id"]
             request_timestamp = received_message["timestamp"]
             result = received_message["result"]
@@ -100,12 +100,16 @@ class Client:  # Client's communication is synchronous: It can not send a reques
     def send_to_primary(self, request, primary_node_id, nodes_ids_list,
                         f):  # Sends a request to the primary and waits for f+1 similar answers
 
-       
+        # get primary node port
         primary_node_port = nodes_ports[primary_node_id]
+        
+        # read request format file
         with open(request_format_file):
             request_format = open(request_format_file)
             request_message = json.load(request_format)
             request_format.close()
+
+    
         now = datetime.datetime.now().timestamp()
         request_message["timestamp"] = now
         request_message["request"] = request
@@ -129,8 +133,11 @@ class Client:  # Client's communication is synchronous: It can not send a reques
         sending_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         host = socket.gethostname()
         sending_socket.connect((host, primary_node_port))
-        print("\t> Client-%s "%(self.client_id))
-        print("\t\tClient-%s sending request to Primary"%(self.client_id))
+        
+        print("\n\n\t> C.2) Clients requests ")
+        print("\t\t> Client-%s "%(self.client_id))
+        print("\t\t\tClient-%s sending request to primary node: "%(self.client_id))
+        print("\t\t\t\t(node-%d, port: %d)"%(primary_node_id, primary_node_port))
         sending_socket.send(request_message)
         if (request not in self.sent_requests_without_answer):
             self.sent_requests_without_answer.append(request)
@@ -142,6 +149,8 @@ class Client:  # Client's communication is synchronous: It can not send a reques
         s = self.socket
         accepted_reply="" # The accepted result for the current 
 
+        print("\n>> D] Messages exchanges")
+        print("\t> Nodes messages: ")
         while True:
             try:
                 s = self.socket
@@ -156,7 +165,6 @@ class Client:  # Client's communication is synchronous: It can not send a reques
                     continue
             received_message = sender_socket.recv(2048)
             
-            #print("Client %d got message: %s" % (self.client_id , received_message))
             sender_socket.close()
 
             [received_message, public_key] = received_message.split(b'split')
@@ -167,6 +175,10 @@ class Client:  # Client's communication is synchronous: It can not send a reques
             received_message = verify_key.verify(received_message).decode()
             received_message = received_message.replace("\'", "\"")
             received_message = json.loads(received_message)
+
+            print("\t\tClient-%d got message: " % (self.client_id ))
+            print("\t\t\t%s from node   -%s" % (received_message["message_type"],received_message["node_id"]))
+            
             # print("Client %d received message: %s" % (self.client_id , received_message))
             answering_node_id = received_message["node_id"]
             request_timestamp = received_message["timestamp"]
