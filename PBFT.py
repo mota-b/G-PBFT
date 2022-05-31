@@ -858,7 +858,6 @@ class Node():
             self.broadcast_message(nodes_ids_list, commit_message)
 
     def broadcast_view_change(self):  # The node broadcasts a view change
-        print("broadcast_view_change0")
         with open(VIEW_CHANGE_FORMAT_FILE):
             view_change_format = open(VIEW_CHANGE_FORMAT_FILE)
             view_change_message = json.load(view_change_format)
@@ -872,7 +871,6 @@ class Node():
             self.received_view_changes[new_view] = [view_change_message]
         else:
             self.received_view_changes[new_view].append(view_change_message)
-        print("broadcast_view_change1")
         # We define P as a set of prepared messages at the actual node with sequence number higher than the sequence number in the last checkpoint
         view_change_message["P"] = [message for message in self.prepared_messages if
                                     message["sequence_number"] > self.stable_checkpoint["sequence_number"]]
@@ -892,7 +890,6 @@ class Node():
         view_change_message = signed_view_change + (b'split') + public_key
 
         self.broadcast_message(consensus_nodes_ids, view_change_message)
-        print("broadcast_view_change2")
         return view_change_message
 
     def send_reply_message_to_client(self, commit_message):

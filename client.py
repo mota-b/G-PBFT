@@ -177,7 +177,7 @@ class Client:  # Client's communication is synchronous: It can not send a reques
             received_message = json.loads(received_message)
 
             print("\t\tClient-%d got message: " % (self.client_id ))
-            print("\t\t\t%s from node   -%s" % (received_message["message_type"],received_message["node_id"]))
+            print("\t\t\t%s from node-%s" % (received_message["message_type"],received_message["node_id"]))
             
             # print("Client %d received message: %s" % (self.client_id , received_message))
             answering_node_id = received_message["node_id"]
