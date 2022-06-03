@@ -7,10 +7,15 @@ import hashlib
 from cmath import inf
 from nacl.signing import SigningKey
 from nacl.signing import VerifyKey
+import random
+import string
+import math
+
+from regex import F
 
 ports_file = "ports.json"
 with open(ports_file):
-    ports_format = open(ports_file)
+    ports_format= open(ports_file)
     ports = json.load(ports_format)
     ports_format.close()
 
@@ -20,8 +25,8 @@ clients_max_number = ports["clients_max_number"]
 nodes_starting_port = ports["nodes_starting_port"]
 nodes_max_number = ports["nodes_max_number"]
 
-nodes_ports = [(nodes_starting_port + i) for i in range(0, nodes_max_number)]
-clients_ports = [(clients_starting_port + i) for i in range(0, clients_max_number)]
+nodes_ports = [(nodes_starting_port + i) for i in range (0,nodes_max_number)]
+clients_ports = [(clients_starting_port + i) for i in range (0,clients_max_number)]
 
 preprepare_format_file = "messages_formats/preprepare_format.json"
 prepare_format_file = "messages_formats/prepare_format.json"
@@ -32,16 +37,57 @@ checkpoint_vote_format_file = "messages_formats/checkpoint_vote_format.json"
 view_change_format_file = "messages_formats/view_change_format.json"
 new_view_format_file = "messages_formats/new_view_format.json"
 
+
+def random_addr(current_node_id):
+    characters = string.ascii_letters + string.digits
+    addr = ''.join(random.choice(characters) for i in range(current_node_id))
+    return addr
+
+class CSC:
+    def __init__(self):
+        self.geohash = random_addr(20)
+        self.addr = random_addr(12)
+        self.csc = hashlib.sha3_256(self.geohash.encode('utf-8') + self.addr.encode('utf-8'))
+
+# Tools-Kit methods
+def create_endorser(sorted_nodes_list):
+    TOP_NODES_SLICE = 10
+    nodes_number = math.ceil(len(sorted_nodes_list) / TOP_NODES_SLICE)
+    return sorted_nodes_list[:nodes_number]
+
+def getNodesWithPingCount(nodes_list):
+    nodes_ping_history = []
+    for node in nodes_list:
+        node_name = "node-"+ str(node.node_id)
+        nodes_ping_history.append([node_name, node.ping_count])
+    return nodes_ping_history
+
+def sort_biggest_ping_number_nodes(to_sort_list):
+    to_sort_list.sort(key=lambda row: row.ping_count, reverse=True)
+    return to_sort_list
+
+def add_geo_hash (node,CSC_list):
+    CSC_list.append(node.id_node,node.csc.csc)
+
+def check_geo_hash (node, CSC_list):
+    item = (node.id_node, node.csc.csc)
+    if item in CSC_list:
+        return True
+    else:
+        return False
+
+
+# G-PBFT methods
 def run_APBFT(nodes,proportion,checkpoint_frequency0,clients_ports0,timer_limit_before_view_change0): # All the nodes participate in the consensus
 
     global p
     p = proportion
 
     global number_of_messages
-    number_of_messages = {}  # This dictionary will store for each request the number of exchanged messages from preprepare to reply: number_of_messages={"request":number_of_exchanged_messages,...}
+    number_of_messages = {} # This dictionary will store for each request the number of exchanged messages from preprepare to reply: number_of_messages={"request":number_of_exchanged_messages,...}
 
     global replied_requests
-    replied_requests = {}  # This dictionary tells if a request was replied to (1) or not
+    replied_requests = {} # This dictionary tells if a request was replied to (1) or not
 
     global timer_limit_before_view_change
     timer_limit_before_view_change = timer_limit_before_view_change0
@@ -53,28 +99,31 @@ def run_APBFT(nodes,proportion,checkpoint_frequency0,clients_ports0,timer_limit_
     accepted_replies = {} # Dictionary that stores for every request the reply accepted by the client
 
     global n
-    n = 0  # total nodes number - It is initiated to 0 and incremented each time a node is instantiated
+    n = 0 # total nodes number - It is initiated to 0 and incremented each time a node is instantiated
 
-    global f
-    f = (n - 1) // 3  # Number of permitted faulty nodes - Should be updated each time n is changed
+    # global f
+    # f = (n - 1) // 3 # Number of permitted faulty nodes - Should be updated each time n is changed
 
     global the_nodes_ids_list
-    the_nodes_ids_list = [i for i in range(n)]
+    the_nodes_ids_list = [i for i in range (n)]
 
-    global j  # next id node (each time a new node is instantiated, it is incremented)
+    global j # next id node (each time a new node is instantiated, it is incremented)
     j = 0
 
-    global requests  # a dictionary where keys are the clients' ids and the value is the timestamp of their last request
-    requests = {}  # Initiate as an empty dictionary
+    global requests # a dictionary where keys are the clients' ids and the value is the timestamp of their last request
+    requests = {} # Initiate as an empty dictionary
 
     global checkpoint_frequency
-    checkpoint_frequency = checkpoint_frequency0
+    checkpoint_frequency=checkpoint_frequency0
 
     global sequence_number
     sequence_number = 1 # Initiate the sequence number to 0 and increment it with each new request - we choosed 0 so that we can have a stable checkpoint at the beginning (necessary for a view change)
 
     global nodes_list
     nodes_list = []
+
+    # global consensus_nodes_list
+    # consensus_nodes_list = []
 
     global total_processed_messages
     total_processed_messages = 0 # The total number of preocessed messages - this is the total number of send messages through the netwirk while processing a request
@@ -107,9 +156,9 @@ def run_nodes(nodes):
     last_waiting_time = 0
     for waiting_time in nodes:
         for tuple in nodes[waiting_time]:
-            for i in range(tuple[1]):
-                time.sleep(waiting_time - last_waiting_time)
-                last_waiting_time = waiting_time
+            for i in range (tuple[1]):
+                time.sleep(waiting_time-last_waiting_time)
+                last_waiting_time=waiting_time
                 node_type = tuple[0]
                 if (node_type=="honest_node"):
                     node=HonestNode(node_id=j)
@@ -128,13 +177,42 @@ def run_nodes(nodes):
                 the_nodes_ids_list.append(j)
                 processed_messages.append(0)
                 messages_processing_rate.append(0) # Initiated with 0
-             
-                consensus_nodes.append(j)
+                # consensus_nodes.append(j)
                 n = n + 1
-                f = (n - 1) // 3
+                # f = (n - 1) // 3
                 #print("%s node %d started" %(node_type,j))
                 j=j+1
 
+    # display nodes_config
+    nodes_list_with_ping_counts =  getNodesWithPingCount(nodes_list)
+    # print("\t\t> Node list")
+    # print("\t\t\t  %s"%(nodes_list_with_ping_counts))
+
+    # display sorted nodes_config
+    sorted_nodes_list = sort_biggest_ping_number_nodes(nodes_list)
+    sorted_nodes_list_with_ping_counts = getNodesWithPingCount(sorted_nodes_list)
+    # print("\t\t> Sorted nodes list")
+    # print("\t\t\t  %s"%(sorted_nodes_list_with_ping_counts))
+    
+    # display endorser nodes_config
+    endorser_sorted_list = create_endorser(sorted_nodes_list)
+    print("\t\t> Endorsers list")
+    endorser_sorted_list_with_ping_counts = getNodesWithPingCount(endorser_sorted_list)
+    print("\t\t\t  %s"%(endorser_sorted_list_with_ping_counts))
+    
+    
+    # append endorsers to consensus nodes list
+    for endorser in endorser_sorted_list:
+        consensus_nodes.append(endorser.node_id)
+        # consensus_nodes_list.append(endorser)
+    
+
+    # consensus_nodes_list = endorser
+    print("\t\t> Consesus participants IDs")
+    print("\t\t\t  %s"%(consensus_nodes))
+    # print("\t\t\t  %s"%(consensus_nodes_list))
+    
+    print("\nNodes online")
    # print(consensus_nodes)
 
 
@@ -156,34 +234,31 @@ def reply_received(request,reply): # This method tells the nodes that the client
     if processed_requests%5 == 0 : # We want to stop counting at 100 for example
         print("Network validated %d requests within %f seconds" % (processed_requests,last_reply_time-first_reply_time))
 
- 
     replied_requests[request] = 1
     accepted_replies[request] = reply
 
- 
     return number_of_messages[request]
 
-
 def get_primary_id():
-    node_0 = nodes_list[0]
+    node_0=nodes_list[0]
     return node_0.primary_node_id
-
 
 def get_nodes_ids_list():
     return consensus_nodes
 
-
 def get_f():
+    n = len(consensus_nodes)
+    global f
+    f = (n - 1) // 3
     return f
 
-
 class Node():
-    def __init__(self, node_id):
+    def __init__(self,node_id):
         self.node_id = node_id
         self.node_port = nodes_ports[node_id]
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        host = socket.gethostname()
+        host = socket.gethostname() 
         s.bind((host, self.node_port))
         s.listen()
         self.socket = s
@@ -207,6 +282,11 @@ class Node():
         self.replies_time = {} # This is a dictionary of the accepted preprepare messages with the time they were replied to. The dictionary has the form : {"request": ["reply",replying_time]...}. the request is discarded once it is executed.
         self.received_view_changes = {} # Dictionary of received view-change messages (+ the view change the node itself sent) if the node is the primary node in the new view, it has the form: {new_view_number:[list_of_view_change_messages]}
         self.asked_view_change = [] # view numbers the node asked for
+        self.csc = CSC()
+        if self.node_id==0:
+            self.ping_count = 100
+        else:
+            self.ping_count = random.randrange(1, 98)
 
     def process_received_message(self,received_message,waiting_time):
             global total_processed_messages
@@ -252,8 +332,6 @@ class Node():
                 requests_digest = received_message["request_digest"]
                 view = received_message["view_number"]
                 tuple = (view,received_message["sequence_number"])
-
-             
 
                 # Making sure the digest's request is good + the view number in the message is similar to the view number of the node + We did not broadcast a message with the same view number and sequence number
                 if ((digest==requests_digest) and (view==self.view_number)): 
@@ -310,7 +388,6 @@ class Node():
                 digest = hashlib.sha256(request.encode()).hexdigest()
                 requests_digest = received_message["request_digest"]
               
-
                 number_of_messages[received_message["request"]] = number_of_messages[received_message["request"]] + 1
                 timestamp = received_message["timestamp"]
                 client_id = received_message["client_id"]
@@ -572,9 +649,8 @@ class Node():
 
     def check (self,received_message,waiting_time):
             # Start view change if one of the timers has reached the limit:
-            i = 0  # Means no timer reached the limit , i = 1 means one of the timers reached their limit
-            if len(self.accepted_requests_time) != 0 and len(
-                    self.asked_view_change) == 0:  # Check if the dictionary is not empty
+            i = 0 # Means no timer reached the limit , i = 1 means one of the timers reached their limit
+            if len(self.accepted_requests_time)!=0 and len(self.asked_view_change)==0: # Check if the dictionary is not empty
                 for request in self.accepted_requests_time:
                     if self.accepted_requests_time[request] != -1:
                         actual_time = time.time()
@@ -585,7 +661,7 @@ class Node():
                             break
             if i==1 and new_view not in self.asked_view_change:
                 # Broadcast a view change:
-                threading.Thread(target=self.broadcast_view_change, args=()).start()
+                threading.Thread(target=self.broadcast_view_change,args=()).start()
                 self.asked_view_change.append(new_view)
                 for request in self.accepted_requests_time:
                     if self.accepted_requests_time[request] != -1:
@@ -619,37 +695,37 @@ class Node():
         destination_node_port = nodes_ports[destination_node_id]
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        host = socket.gethostname()
+        host = socket.gethostname() 
         try:
             s.connect((host, destination_node_port))
-            s.send(message)
-            s.close()
+            s.send(message)  
+            s.close() 
         except:
             pass
-
-    def broadcast_message(self, nodes_ids_list, message):  # Send to all connected nodes # Acts as a socket server
+     
+    def broadcast_message(self,nodes_ids_list,message): # Send to all connected nodes # Acts as a socket server
         for destination_node_id in nodes_ids_list:
                 self.send(destination_node_id,message)
 
     def broadcast_preprepare_message(self,request_message,nodes_ids_list): # The primary node prepares and broadcats a PREPREPARE message
         if (replied_requests[request_message["request"]]==0):
             with open(preprepare_format_file):
-                preprepare_format = open(preprepare_format_file)
+                preprepare_format= open(preprepare_format_file)
                 preprepare_message = json.load(preprepare_format)
                 preprepare_format.close()
-            preprepare_message["view_number"] = self.view_number
+            preprepare_message["view_number"]=self.view_number
             global sequence_number
-            preprepare_message["sequence_number"] = sequence_number
-            preprepare_message["timestamp"] = request_message["timestamp"]
-            tuple = (self.view_number, sequence_number)
-            sequence_number = sequence_number + 1  # Increment the sequence number after each request
-            # Calculating the request's digest using SHA256
+            preprepare_message["sequence_number"]=sequence_number
+            preprepare_message["timestamp"]=request_message["timestamp"]
+            tuple = (self.view_number,sequence_number)
+            sequence_number = sequence_number + 1 # Increment the sequence number after each request 
+            #Calculating the request's digest using SHA256
             request = request_message["request"]
             digest = hashlib.sha256(request.encode()).hexdigest()
-            preprepare_message["request_digest"] = digest
-            preprepare_message["request"] = request_message["request"]
-            preprepare_message["client_id"] = request_message["client_id"]
-            self.preprepares[tuple] = digest
+            preprepare_message["request_digest"]=digest
+            preprepare_message["request"]=request_message["request"]
+            preprepare_message["client_id"]=request_message["client_id"]
+            self.preprepares[tuple]=digest
             self.message_log.append(preprepare_message)
 
             # Generate a new random signing key
@@ -664,24 +740,24 @@ class Node():
             # Serialize the verify key to send it to a third party
             public_key = verify_key.encode()
 
-            preprepare_message = signed_preprepare + (b'split') + public_key
+            preprepare_message = signed_preprepare +(b'split')+  public_key
 
-            self.broadcast_message(nodes_ids_list, preprepare_message)
+            self.broadcast_message(nodes_ids_list,preprepare_message)
 
-    def broadcast_prepare_message(self, preprepare_message, nodes_ids_list):  # The node broadcasts a prepare message
-        if (replied_requests[preprepare_message["request"]] == 0):
+    def broadcast_prepare_message(self,preprepare_message,nodes_ids_list): # The node broadcasts a prepare message
+        if (replied_requests[preprepare_message["request"]]==0):
             # S'assurer des conditions avant d'envoyer le PREPARE message
             with open(prepare_format_file):
-                prepare_format = open(prepare_format_file)
+                prepare_format= open(prepare_format_file)
                 prepare_message = json.load(prepare_format)
                 prepare_format.close()
-            prepare_message["view_number"] = self.view_number
-            prepare_message["sequence_number"] = preprepare_message["sequence_number"]
-            prepare_message["request_digest"] = preprepare_message["request_digest"]
-            prepare_message["request"] = preprepare_message["request"]
-            prepare_message["node_id"] = self.node_id
-            prepare_message["client_id"] = preprepare_message["client_id"]
-            prepare_message["timestamp"] = preprepare_message["timestamp"]
+            prepare_message["view_number"]=self.view_number
+            prepare_message["sequence_number"]=preprepare_message["sequence_number"]
+            prepare_message["request_digest"]=preprepare_message["request_digest"]
+            prepare_message["request"]=preprepare_message["request"]
+            prepare_message["node_id"]=self.node_id
+            prepare_message["client_id"]=preprepare_message["client_id"]
+            prepare_message["timestamp"]=preprepare_message["timestamp"]
 
             # Generate a new random signing key
             signing_key = SigningKey.generate()
@@ -701,20 +777,19 @@ class Node():
 
             return prepare_message
 
-    def broadcast_commit_message(self, prepare_message, nodes_ids_list,
-                                 sequence_number):  # The node broadcasts a commit message
-        if (replied_requests[prepare_message["request"]] == 0):
+    def broadcast_commit_message(self,prepare_message,nodes_ids_list,sequence_number): # The node broadcasts a commit message
+        if (replied_requests[prepare_message["request"]]==0):
             with open(commit_format_file):
-                commit_format = open(commit_format_file)
+                commit_format= open(commit_format_file)
                 commit_message = json.load(commit_format)
                 commit_format.close()
-            commit_message["view_number"] = self.view_number
-            commit_message["sequence_number"] = sequence_number
-            commit_message["node_id"] = self.node_id
-            commit_message["client_id"] = prepare_message["client_id"]
-            commit_message["request_digest"] = prepare_message["request_digest"]
-            commit_message["request"] = prepare_message["request"]
-            commit_message["timestamp"] = prepare_message["timestamp"]
+            commit_message["view_number"]=self.view_number
+            commit_message["sequence_number"]=sequence_number
+            commit_message["node_id"]=self.node_id
+            commit_message["client_id"]=prepare_message["client_id"]
+            commit_message["request_digest"]=prepare_message["request_digest"]
+            commit_message["request"]=prepare_message["request"]
+            commit_message["timestamp"]=prepare_message["timestamp"]
 
             # Generate a new random signing key
             signing_key = SigningKey.generate()
@@ -728,28 +803,27 @@ class Node():
             # Serialize the verify key to send it to a third party
             public_key = verify_key.encode()
 
-            commit_message = signed_commit + (b'split') + public_key
+            commit_message = signed_commit +(b'split')+  public_key
 
-            self.broadcast_message(nodes_ids_list, commit_message)
+            self.broadcast_message(nodes_ids_list,commit_message)
 
-    def broadcast_view_change(self):  # The node broadcasts a view change
+    def broadcast_view_change(self): # The node broadcasts a view change
         with open(view_change_format_file):
-            view_change_format = open(view_change_format_file)
+            view_change_format= open(view_change_format_file)
             view_change_message = json.load(view_change_format)
             view_change_format.close()
-        new_view = self.view_number + 1
-        view_change_message["new_view"] = new_view
-        view_change_message["last_sequence_number"] = self.stable_checkpoint["sequence_number"]
-        view_change_message["C"] = self.stable_checkpoint_validators
-        view_change_message["node_id"] = self.node_id
+        new_view = self.view_number+1
+        view_change_message["new_view"]=new_view
+        view_change_message["last_sequence_number"]=self.stable_checkpoint["sequence_number"]
+        view_change_message["C"]=self.stable_checkpoint_validators
+        view_change_message["node_id"]=self.node_id
         if new_view not in self.received_view_changes:
-            self.received_view_changes[new_view] = [view_change_message]
+            self.received_view_changes[new_view]=[view_change_message]
         else:
             self.received_view_changes[new_view].append(view_change_message)
-
+        
         # We define P as a set of prepared messages at the actual node with sequence number higher than the sequence number in the last checkpoint
-        view_change_message["P"] = [message for message in self.prepared_messages if
-                                    message["sequence_number"] > self.stable_checkpoint["sequence_number"]]
+        view_change_message["P"]=[message for message in self.prepared_messages if message["sequence_number"]>self.stable_checkpoint["sequence_number"]]
 
         # Generate a new random signing key
         signing_key = SigningKey.generate()
@@ -763,7 +837,7 @@ class Node():
         # Serialize the verify key to send it to a third party
         public_key = verify_key.encode()
 
-        view_change_message = signed_view_change + (b'split') + public_key
+        view_change_message = signed_view_change +(b'split')+  public_key
 
         self.broadcast_message(the_nodes_ids_list,view_change_message)
 
@@ -774,7 +848,7 @@ class Node():
         client_id = commit_message["client_id"]
         client_port = clients_ports[client_id]
         with open(reply_format_file):
-            reply_format = open(reply_format_file)
+            reply_format= open(reply_format_file)
             reply_message = json.load(reply_format)
             reply_format.close()
         reply_message["view_number"]=self.view_number
@@ -782,10 +856,10 @@ class Node():
         reply_message["node_id"]=self.node_id
         reply_message["timestamp"]=commit_message["timestamp"]
         reply = "Request executed"
-        reply_message["result"] = reply
-        reply_message["sequence_number"] = commit_message["sequence_number"]
-        reply_message["request"] = commit_message["request"]
-        reply_message["request_digest"] = commit_message["request_digest"]
+        reply_message["result"]=reply
+        reply_message["sequence_number"]=commit_message["sequence_number"]
+        reply_message["request"]=commit_message["request"]
+        reply_message["request_digest"]=commit_message["request_digest"]
 
         # Generate a new random signing key
         signing_key = SigningKey.generate()
@@ -799,10 +873,10 @@ class Node():
         # Serialize the verify key to send it to a third party
         public_key = verify_key.encode()
 
-        signed_reply_message = signed_reply + (b'split') + public_key
+        signed_reply_message = signed_reply +(b'split')+  public_key
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        host = socket.gethostname()
+        host = socket.gethostname() 
         try:
             s.connect((host, client_port))
             s.send(signed_reply_message)
@@ -811,12 +885,10 @@ class Node():
         except:
             pass
         return reply
-
-
+                             
 class HonestNode(Node):
-    def receive(self, waiting_time=0):
-        Node.receive(self, waiting_time)
-
+    def receive(self,waiting_time=0):
+        Node.receive(self,waiting_time)
 
 class SlowNode(Node):
     def receive(self,waiting_time=20):
@@ -828,7 +900,7 @@ class NonRespondingNode(Node):
             s=self.socket
             sender_socket = s.accept()[0]
             received_message = sender_socket.recv(2048).decode()
-            # print("Node %d got message: %s" % (self.node_id , received_message))
+            #print("Node %d got message: %s" % (self.node_id , received_message))
             sender_socket.close()
             # receives messages but doesn't do anything
           
@@ -837,10 +909,10 @@ class FaultyPrimary(Node): # This node changes the client's request digest while
         Node.receive(self,waiting_time)
     def broadcast_preprepare_message(self,request_message,nodes_ids_list): # The primary node prepares and broadcats a PREPREPARE message
         with open(preprepare_format_file):
-            preprepare_format = open(preprepare_format_file)
+            preprepare_format= open(preprepare_format_file)
             preprepare_message = json.load(preprepare_format)
             preprepare_format.close()
-        preprepare_message["view_number"] = self.view_number
+        preprepare_message["view_number"]=self.view_number
         global sequence_number
         preprepare_message["sequence_number"]=sequence_number
         preprepare_message["timestamp"]=request_message["timestamp"]
@@ -849,11 +921,11 @@ class FaultyPrimary(Node): # This node changes the client's request digest while
         #Calculating the request's digest using SHA256
         request = request_message["request"]+"abc"
         digest = hashlib.sha256(request.encode()).hexdigest()
-        preprepare_message["request_digest"] = digest
-        preprepare_message["request"] = request_message["request"]
-        preprepare_message["client_id"] = request_message["client_id"]
-        preprepare_message["node_id"] = self.node_id
-        self.preprepares[tuple] = digest
+        preprepare_message["request_digest"]=digest
+        preprepare_message["request"]=request_message["request"]
+        preprepare_message["client_id"]=request_message["client_id"]
+        preprepare_message["node_id"]=self.node_id
+        self.preprepares[tuple]=digest
         self.message_log.append(preprepare_message)
 
         # Generate a new random signing key
@@ -868,7 +940,7 @@ class FaultyPrimary(Node): # This node changes the client's request digest while
         # Serialize the verify key to send it to a third party
         public_key = verify_key.encode()
 
-        preprepare_message = signed_preprepare + (b'split') + public_key
+        preprepare_message = signed_preprepare +(b'split')+  public_key
 
         self.broadcast_message(nodes_ids_list,preprepare_message)
 
