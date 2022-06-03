@@ -8,14 +8,15 @@ import time
 import asyncio
 
 # Time parameters
+START_CLIENTS_TIMEOUT = 1 # Start clients 'x' seconds after the environment config
 REQUEST_INTERVAL = 200 # Time the client will wait before resending the request. This time, it broadcasts the request to all nodes
+
 VIEW_CHANGES_TIMEOUT = 1000 # There is no value proposed in the paper so let's fix it to 120s
 CHECKPOINT_FREQUENCY = 1000 # 100 is the proposed value in the original article
 
-START_CLIENTS_TIMEOUT = 1 # x seconds after the environment config
 
 # Nodes parameters
-HONEST_NODES = 4
+HONEST_NODES = 40
 
 SLOW_NODES = 0
 NONE_RESPONDING_NODES = 0
@@ -51,7 +52,6 @@ def startEnvironment():
     # Runn APBFT protocol
     print("\n\n>> B] start PBFT ")
     asyncio.run(run_APBFT(nodes_config, VIEW_CHANGES_TIMEOUT, CHECKPOINT_FREQUENCY))
-
 def startClient():
     print("\n\n>> C] start Client ")
     requests_number = 1  # The user chooses the number of requests he wants to execute simultaneously (They are all sent to the PBFT network at the same time) - Here each request will be sent by a different client
@@ -70,11 +70,10 @@ def startClient():
         # nodes_ids_list = get_nodes_ids_list()
         consensus_nodes_ids_list = get_consensus_nodes_ids_list()
         primary_id = get_primary_id()
-        permitted_faulty_nodes_number = get_f()
+        permitted_faulty_nodes_number = get_faulty_nodes_number_permitted()
         
-        threading.Thread(target=clients_list[i].send_to_primary,args=("I am the client "+str(i),primary_id,consensus_nodes_ids_list,permitted_faulty_nodes_number)).start()
+        threading.Thread(target=clients_list[i].send_to_primary,args=("I am the client "+str(i),primary_id,consensus_nodes_ids_list, permitted_faulty_nodes_number)).start()
         time.sleep(1) #Exécution plus rapide lorsqu'on attend un moment avant de lancer la requête suivante
-
 def main():
     # start environment
     startEnvironment()

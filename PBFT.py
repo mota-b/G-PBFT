@@ -17,7 +17,6 @@ def random_addr(current_node_id):
     addr = ''.join(random.choice(characters) for i in range(current_node_id))
     return addr
 
-
 class CSC:
     def __init__(self):
         self.geohash = random_addr(20)
@@ -54,9 +53,8 @@ nodes_ports = [(NODES_PORT_OFFSET + i) for i in range(0, MAX_NODES_NUMBER)]
 clients_ports = [(CLIENTS_PORT_OFFSET + i) for i in range(0, MAX_CLIENTS_NUMBER)]
 
 # nodes parameters
-TOP_NODES_SLICE = 1 # ==> total_nb_nodes / TOP_NODES_SLICE
+TOP_NODES_SLICE = 10 # ==> total_nb_nodes / TOP_NODES_SLICE
 nodes_number = 0  # total nodes number - It is initiated to 0 and incremented each time a node is instantiated
-faulty_nodes_number_permitted = (nodes_number - 1) / 3  # Number of permitted faulty nodes_config - Should be updated each time nodes_number is changed
 current_node_id = 0 # next id node (each time a new node is instantiated, it is incremented)    
 
 the_nodes_ids_list = [i for i in range(nodes_number)]
@@ -79,6 +77,11 @@ processed_messages = []  # Number of processed messages by each node
 messages_processing_rate = []  # This is the rate of processed messages among all the nodes_config in the network - calculated as the ratio of messages sent by the node to all sent messages through the network by all the nodes_config
 
 
+global processed_requests  # This is the total number of clients_requests processed by the network
+processed_requests = 0
+global first_reply_time
+
+# G-PBFT methods
 async def run_APBFT(nodes_config, view_changes_timeout, checkpoint_frequency ):  # All the nodes_config participate in the consensus
 
     # get main global values
@@ -104,8 +107,6 @@ def run_nodes(nodes_config):
     global nodes_list
     global consensus_nodes_list
     
-    global faulty_nodes_number_permitted
-
     # get total nodes number
     total_initial_nodes = 0
     for node_type in nodes_config[0]:
@@ -141,7 +142,7 @@ def run_nodes(nodes_config):
 
                 #consensus_nodes_ids.append(current_node_id) # now we have endorsers list to add for the consensus
                 nodes_number = nodes_number + 1
-                faulty_nodes_number_permitted = (nodes_number - 1) // 3
+                # faulty_nodes_number_permitted = (nodes_number - 1) // 3
                 print("\t\t\t%s node %d started on port: %d" %(node_type,current_node_id, node.node_port))
                 current_node_id = current_node_id + 1
 
@@ -169,18 +170,6 @@ def run_nodes(nodes_config):
         consensus_nodes_ids.append(endorser.node_id)
         consensus_nodes_list.append(endorser)
     
-    # TODO: for the next maintainer
-    # From 'The original code' the processus doesn't work if the node-0 is note in the list of consensus at the position 0
-    # if 0 not in consensus_nodes_ids:
-    #     consensus_nodes_ids.insert(0, 0)
-    #     consensus_nodes_ids.pop()
-    #     consensus_nodes_list.insert(0, nodes_list[0])
-    #     consensus_nodes_list.pop()
-    # else: 
-    #     if consensus_nodes_ids[0] != 0:
-    #         node_0_index = consensus_nodes_ids.index(0)
-    #         consensus_nodes_ids[0], consensus_nodes_ids[node_0_index] = consensus_nodes_ids[node_0_index], consensus_nodes_ids[0]
-    #         consensus_nodes_list[0], consensus_nodes_list[node_0_index] = consensus_nodes_list[node_0_index], consensus_nodes_list[0]
 
     # consensus_nodes_list = endorser
     print("\t\t> Consesus participants IDs")
@@ -188,29 +177,6 @@ def run_nodes(nodes_config):
     print("\t\t\t  %s"%(consensus_nodes_list))
     
     print("\nNodes online")
-
-
-def create_endorser(sorted_nodes_list):
-    nodes_number = math.ceil(len(sorted_nodes_list) / TOP_NODES_SLICE)
-    return sorted_nodes_list[:nodes_number]
-
-def getNodesWithPingCount(nodes_list):
-    nodes_ping_history = []
-    for node in nodes_list:
-        node_name = "node-"+ str(node.node_id)
-        nodes_ping_history.append([node_name, node.ping_count])
-    return nodes_ping_history
-
-def sort_biggest_ping_number_nodes(to_sort_list):
-    to_sort_list.sort(key=lambda row: row.ping_count, reverse=True)
-    return to_sort_list
-
-
-
-global processed_requests  # This is the total number of clients_requests processed by the network
-processed_requests = 0
-global first_reply_time
-
 
 def reply_received(request,
                    reply):  # This method tells the nodes_config that the client received its reply so that they can know the accepted reply
@@ -233,6 +199,35 @@ def reply_received(request,
 
     return number_of_messages[request]
 
+
+# Tools-Kit methods
+def create_endorser(sorted_nodes_list):
+    nodes_number = math.ceil(len(sorted_nodes_list) / TOP_NODES_SLICE)
+    return sorted_nodes_list[:nodes_number]
+
+def getNodesWithPingCount(nodes_list):
+    nodes_ping_history = []
+    for node in nodes_list:
+        node_name = "node-"+ str(node.node_id)
+        nodes_ping_history.append([node_name, node.ping_count])
+    return nodes_ping_history
+
+def sort_biggest_ping_number_nodes(to_sort_list):
+    to_sort_list.sort(key=lambda row: row.ping_count, reverse=True)
+    return to_sort_list
+
+def add_geo_hash (node,CSC_list):
+    CSC_list.append(node.id_node,node.csc.csc)
+
+def check_geo_hash (node, CSC_list):
+    item = (node.id_node, node.csc.csc)
+    if item in CSC_list:
+        return True
+    else:
+        return False
+
+
+# Helpers methods
 def get_primary_id():
     primary_node_id = consensus_nodes_ids[0]
     return primary_node_id
@@ -249,10 +244,13 @@ def get_nodes_ids_list():
 def get_consensus_nodes_ids_list():
     return consensus_nodes_ids
 
-def get_f():
+def get_faulty_nodes_number_permitted():
+    faulty_nodes_number_permitted = (len(consensus_nodes_ids) - 1) / 3  # Number of permitted faulty nodes_config - Should be updated each time nodes_number is changed
+
     return faulty_nodes_number_permitted
 
 
+# Node classes
 class Node():
     def __init__(self, node_id):
         # node identifier
@@ -302,6 +300,10 @@ class Node():
     def process_received_message(self, received_message, waiting_time):
         global total_processed_messages
         message_type = received_message["message_type"]
+
+        self_consensus_index = consensus_nodes_ids.index(self.node_id)
+        
+        # request message from client
         if (message_type == "REQUEST"):
             if (received_message["request"] not in number_of_messages):
                 number_of_messages[received_message["request"]] = 0
@@ -326,12 +328,15 @@ class Node():
                         clients_requests[client_id] = actual_timestamp
                         self.message_log.append(received_message)
 
-                        print("\t\tNode-%d broadcasting PRE_PREPARED messages to: "%(self.node_id))
-                        print(consensus_nodes_ids)
+                        broadcast_list = consensus_nodes_ids.copy()
+                        #broadcast_list.pop(self_consensus_index)
+                        print("\n\t\t--> Node-%d broadcasting PRE_PREPARE messages to: %s"%(self.node_id, str(broadcast_list)))
                         self.broadcast_preprepare_message(request_message=received_message,
-                                                          nodes_ids_list=consensus_nodes_ids)
+                                                          nodes_ids_list=broadcast_list)
                 else:
                     self.send(destination_node_id=self.primary_node_id, message=received_message)
+        
+        # pre-prepare message from primary-node
         elif (message_type == "PREPREPARE"):
             node_id = received_message["node_id"]
             request = received_message["request"]
@@ -358,8 +363,13 @@ class Node():
                 if tuple not in self.preprepares:
                     self.message_log.append(received_message)
                     self.preprepares[tuple] = digest
-                    self.broadcast_prepare_message(preprepare_message=received_message, nodes_ids_list=consensus_nodes_ids)
-
+                    
+                    broadcast_list = consensus_nodes_ids.copy()
+                    #broadcast_list.pop(self_consensus_index)
+                    print("\n\t\t--> Node-%d sending PREPARE messages to: %s"%(self.node_id,  str(broadcast_list)))
+                    self.broadcast_prepare_message(preprepare_message=received_message, nodes_ids_list=broadcast_list)
+        
+        # prepare message from endorser
         elif (message_type == "PREPARE"):
             total_processed_messages += 1
             node_id = received_message["node_id"]
@@ -397,11 +407,19 @@ class Node():
             # Second condition: Making sure the node inserted in its message log: 2f prepares from different backups that match the pre-preapare (same view, same sequence number and same digest)
             # print(len(self.prepares[tuple]))
             if (p == 1 and len(self.prepares[tuple]) == (
-                    2 * faulty_nodes_number_permitted)):  # The 2*faulty_nodes_number_permitted received messages also include the node's own received message
+                    2 * get_faulty_nodes_number_permitted())):  # The 2*faulty_nodes_number_permitted received messages also include the node's own received message
                 self.prepared_messages.append(received_message)
-                self.broadcast_commit_message(prepare_message=received_message, nodes_ids_list=consensus_nodes_ids,
-                                              sequence_number=the_sequence_number)
 
+                broadcast_list = consensus_nodes_ids.copy()
+                #broadcast_list.pop(self_consensus_index)
+                print("\n\t\t--> Node-%d broadcasting COMMIT messages to: %s"%(self.node_id, str(broadcast_list)))
+                p = 0
+                self.broadcast_preprepare_message(request_message=received_message,
+                                                    nodes_ids_list=broadcast_list)
+            else: 
+                print("\n\t\t--> Node-%d can't broadcast COMMIT"%(self.node_id))
+        
+        # commit message from endorser
         elif (message_type == "COMMIT"):
 
             total_processed_messages += 1
@@ -433,7 +451,7 @@ class Node():
                     self.commits[tuple] = self.commits[tuple] + 1
                 i = 0
 
-                if (self.commits[tuple] == (2 * faulty_nodes_number_permitted + 1) and (tuple in self.prepares)):
+                if (self.commits[tuple] == (2 * get_faulty_nodes_number_permitted() + 1) and (tuple in self.prepares)):
                     if client_id not in self.last_reply_timestamp:
                         i = 1
                     else:
@@ -486,7 +504,8 @@ class Node():
                             checkpoint_message = signed_checkpoint + (b'split') + public_key
 
                             self.broadcast_message(consensus_nodes_ids, checkpoint_message)
-
+        
+        
         elif (message_type == "CHECKPOINT"):
             lock = Lock()
             lock.acquire()
@@ -521,7 +540,6 @@ class Node():
                         self.send(received_message["node_id"], checkpoint_vote_message)
 
             lock.release()
-
         elif (message_type == "VOTE"):
             lock = Lock()
             lock.acquire()
@@ -533,7 +551,7 @@ class Node():
                     node_id = received_message["node_id"]
                     if (node_id not in self.checkpoints[str(checkpoint)]):
                         self.checkpoints[str(checkpoint)].append(node_id)
-                        if (len(self.checkpoints[str(checkpoint)]) == (2 * faulty_nodes_number_permitted + 1)):
+                        if (len(self.checkpoints[str(checkpoint)]) == (2 * get_faulty_nodes_number_permitted() + 1)):
                             # This will be the last stable checkpoint
                             self.stable_checkpoint = checkpoint
                             self.stable_checkpoint_validators = self.checkpoints[str(checkpoint)]
@@ -546,7 +564,6 @@ class Node():
                                         self.message_log.remove(message)
                             break
             lock.release()
-
         elif (message_type == "VIEW-CHANGE"):
             new_asked_view = received_message["new_view"]
             node_requester = received_message["node_id"]
@@ -560,7 +577,7 @@ class Node():
                         requested_nodes.append(request["node_id"])
                     if node_requester not in requested_nodes:
                         self.received_view_changes[new_asked_view].append(received_message)
-                if len(self.received_view_changes[new_asked_view]) == 2 * faulty_nodes_number_permitted:
+                if len(self.received_view_changes[new_asked_view]) == 2 * get_faulty_nodes_number_permitted():
 
                     # The primary sends a view-change message for this view if it didn't do it before
                     if new_asked_view not in self.asked_view_change:
@@ -645,8 +662,6 @@ class Node():
 
                         self.broadcast_message(consensus_nodes_ids, new_view_message)
                         print("New view!")
-
-
         elif (message_type == "NEW-VIEW"):
             # TO DO : Verify the set O in the new view message
 
@@ -669,11 +684,10 @@ class Node():
     def receive(self,
                 waiting_time):  # The waiting_time parameter is for nodes we want to be slow, they will wait for a few seconds before processing a message =0 by default
         while True:
-            
             s = self.socket
             c, _ = s.accept()
             received_message = c.recv(2048)
-            print("\t\tNode %d got message:" % (self.node_id))
+            print("\t\t\tNode %d got message:" % (self.node_id))
             [received_message, public_key] = received_message.split(b'split')
             
             # Create a VerifyKey object from a hex serialized public key    
@@ -682,10 +696,10 @@ class Node():
             received_message = received_message.replace("\'", "\"")
             received_message = json.loads(received_message)
             if received_message["message_type"]=="REQUEST": 
-                print("\t\t\t%s from client-%s" % (received_message["message_type"],received_message["client_id"]))
+                print("\t\t\t\t%s from client-%s" % (received_message["message_type"],received_message["client_id"]))
             else: 
-                print("\t\t\t%s from node-%s for the request of client-%s" % (received_message["message_type"],received_message["node_id"],received_message["client_id"]))
-            time.sleep(2)
+                print("\t\t\t\t%s from node-%s for the request of client-%s" % (received_message["message_type"],received_message["node_id"],received_message["client_id"]))
+            time.sleep(1)
             threading.Thread(target=self.check, args=(received_message, waiting_time,)).start()
 
     def check(self, received_message, waiting_time):
@@ -1080,12 +1094,3 @@ class FaultyRepliesNode(Node):  # This node sends a fauly reply to the client
             pass
         return reply
 
-def add_geo_hash (node,CSC_list):
-    CSC_list.append(node.id_node,node.csc.csc)
-
-def check_geo_hash (node, CSC_list):
-    item = (node.id_node, node.csc.csc)
-    if item in CSC_list:
-        return True
-    else:
-        return False
